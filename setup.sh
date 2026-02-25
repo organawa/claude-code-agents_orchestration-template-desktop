@@ -123,6 +123,32 @@ echo -e "${GREEN}--- GitHub Configuration ---${NC}"
 GITHUB_OWNER="${GITHUB_OWNER:-$(prompt_with_default "GitHub owner (username or org)" "")}"
 GITHUB_REPO="${GITHUB_REPO:-$(prompt_with_default "GitHub repo name" "$PROJECT_SLUG")}"
 echo -e "  GitHub: ${GREEN}$GITHUB_OWNER/$GITHUB_REPO${NC}"
+
+# ─── Create GitHub repo if it doesn't exist ──────────────────
+if [ "$HAS_GH" = true ]; then
+    REPO_EXISTS=$(gh repo view "$GITHUB_OWNER/$GITHUB_REPO" --json name --jq '.name' 2>/dev/null || echo "")
+    if [ -z "$REPO_EXISTS" ]; then
+        if [ "$NON_INTERACTIVE" = true ]; then
+            CREATE_REPO="${CREATE_REPO:-y}"
+        else
+            echo ""
+            read -p "Repository '$GITHUB_OWNER/$GITHUB_REPO' not found. Create it on GitHub? (y/n): " CREATE_REPO
+        fi
+        if [ "$CREATE_REPO" = "y" ] || [ "$CREATE_REPO" = "Y" ]; then
+            if [ "$NON_INTERACTIVE" != true ]; then
+                read -p "Visibility (public/private) [private]: " REPO_VISIBILITY
+                REPO_VISIBILITY="${REPO_VISIBILITY:-private}"
+            else
+                REPO_VISIBILITY="${REPO_VISIBILITY:-private}"
+            fi
+            gh repo create "$GITHUB_OWNER/$GITHUB_REPO" "--$REPO_VISIBILITY" --description "$PROJECT_NAME" 2>/dev/null \
+                && echo -e "  ${GREEN}Created:${NC} github.com/$GITHUB_OWNER/$GITHUB_REPO ($REPO_VISIBILITY)" \
+                || echo -e "  ${YELLOW}Could not create repo. Create it manually on github.com before pushing.${NC}"
+        fi
+    else
+        echo -e "  ${GREEN}Repo exists:${NC} github.com/$GITHUB_OWNER/$GITHUB_REPO"
+    fi
+fi
 echo ""
 
 # ═══════════════════════════════════════════════════════════════
