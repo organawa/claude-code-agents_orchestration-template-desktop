@@ -1,0 +1,13 @@
+{
+  "pipeline": "build",
+  "created": "{{DATE}}",
+  "phases": {
+    "1": { "name": "Discovery & Specification", "status": "pending", "checkpoint": true },
+    "2": { "name": "Architecture & Design", "status": "pending", "checkpoint": true },
+    "3": { "name": "UI/UX Design", "status": "pending", "checkpoint": false },
+    "4": { "name": "Implementation", "status": "pending", "checkpoint": true },
+    "5": { "name": "Quality Assurance", "status": "pending", "checkpoint": false },
+    "6": { "name": "DevOps & Deployment", "status": "pending", "checkpoint": false },
+    "7": { "name": "Documentation & Delivery", "status": "pending", "checkpoint": true }
+  }
+}

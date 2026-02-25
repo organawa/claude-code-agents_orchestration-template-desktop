@@ -1,0 +1,37 @@
+# Product Brief
+
+<!-- Fill in this template with your product vision. This is the input for the build pipeline. -->
+<!-- Run `/build-phase 1` after completing this document. -->
+
+## Product Name
+<!-- What is the product called? -->
+
+## Problem Statement
+<!-- What problem does this solve? Who has this problem? Why does it matter? -->
+
+## Target Users
+<!-- Who will use this product? Be specific about user segments. -->
+
+## Core Features
+<!-- List the main features. Be specific about what each feature does. -->
+
+### Feature 1: [Name]
+<!-- Description, user benefit, priority (Must-Have / Should-Have / Nice-to-Have) -->
+
+### Feature 2: [Name]
+<!-- Description, user benefit, priority -->
+
+### Feature 3: [Name]
+<!-- Description, user benefit, priority -->
+
+## Technical Constraints
+<!-- Stack imposed? Hosting target? Existing integrations? Security requirements? -->
+
+## Non-Technical Constraints
+<!-- Deadline, budget, enterprise standards to follow -->
+
+## Success Criteria
+<!-- How do you measure if this product is successful? KPIs, metrics. -->
+
+## Inspiration / References
+<!-- Links to similar products, screenshots, wireframes, design references -->

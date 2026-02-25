@@ -1,0 +1,296 @@
+# {{PROJECT_NAME}} - Claude Instructions
+
+## Rules
+
+- **Protect user data:** Never `git stash`, `git reset --hard`, or `git checkout .` when `{{PROTECTED_DATA_DIR}}` has uncommitted changes. Backup first: `cp -r {{PROTECTED_DATA_DIR}} {{PROTECTED_DATA_DIR}}.backup`
+- **Feature branches:** Never commit directly to `develop` for multi-commit work. Create `feature/<issue-number>-<desc>` from develop. Only merge when user approves.
+- **One issue at a time.** Never work on multiple issues in parallel.
+- **Human checkpoints are mandatory.** After build phases 1, 2, 4, 7 and after "Ready for testing" / "Ready for Prod" — STOP and wait for user.
+- **Logs before code:** When debugging, use `/enable-debug` and check logs BEFORE investigating code.
+- **Tests before merge:** Targeted tests must pass before merging to develop. Full suite (core + ui + e2e) must pass before merging to main.
+- **Never release without explicit user confirmation.**
+- **Never read** `node_modules/`, `__pycache__/`, `target/`, `dist/`, `.next/`, `.svelte-kit/`
+- **Build phases are sequential.** Never skip phases or run them out of order.
+
+## Documentation Configuration
+
+Documentation target: **{{DOC_TARGET}}**
+
+<!-- LOCAL_DOCS_START -->
+- **Local mode**: Phase 7 generates `README.md` and `docs/developer-guide.md` via the `technical-writer` agent.
+<!-- LOCAL_DOCS_END -->
+<!-- NOTION_START -->
+- **Notion mode**: Phase 7 generates documentation directly in the Notion database via MCP tools. The main thread handles this (not a subagent) since Notion MCP tools are not available to subagents.
+<!-- NOTION_END -->
+
+## Project Mode Detection
+
+This template supports two operational modes. When the user first engages:
+
+1. **If `docs/product-brief.md` is filled in and no codebase exists** → Use **Phase A — Build Pipeline**
+2. **If a codebase already exists** (src/, app/, core/, ui/, etc.) → Use **Phase B — Issue Lifecycle**
+3. **If unclear** → Ask the user which mode to use
+
+After Phase A completes (Phase 7 validated), the project transitions permanently to Phase B.
+
+---
+
+## Phase A — Build Pipeline
+
+7-phase agent orchestration to build a desktop application from a Product Brief. Each phase invokes specialized agents that produce documents or code.
+
+### Phase Overview
+
+| Phase | Name | Agent(s) | Output | Model | Checkpoint |
+|-------|------|----------|--------|-------|------------|
+| 1 | Discovery & Specification | `product-analyst` | `docs/PRD.md` | opus | STOP |
+| 2 | Architecture & Design | `solution-architect` + `database-architect` | `docs/architecture/`, `docs/database/` | opus | STOP |
+| 3 | Desktop UI Design | `ui-designer` | `docs/design/` | opus | — |
+| 4 | Implementation | `core-dev` + `ui-dev` + `integration-glue` | Source code | sonnet | STOP |
+| 5 | Quality Assurance | `test-writer` + `security-auditor` | Tests, `docs/qa/`, `docs/security/` | sonnet | — |
+| 6 | Build & Distribution | `devops-engineer` | Packaging, CI/CD, `docs/devops/` | sonnet | — |
+<!-- LOCAL_DOCS_START -->
+| 7 | Documentation & Delivery | `technical-writer` | `README.md`, `docs/developer-guide.md` | sonnet | STOP |
+<!-- LOCAL_DOCS_END -->
+<!-- NOTION_START -->
+| 7 | Documentation & Delivery | main thread (Notion MCP) | Notion documentation database | sonnet | STOP |
+<!-- NOTION_END -->
+
+### How to Use
+
+```
+/build-phase 1       → Discovery: produces PRD.md → STOP
+/build-validate 1    → User validates PRD → unlocks phase 2
+/build-phase 2       → Architecture: produces architecture/ + database/ → STOP
+/build-validate 2    → User validates architecture → unlocks phases 3-4
+/build-phase 3       → Desktop UI Design: produces design/
+/build-phase 4       → Implementation (Agent Teams): source code → STOP
+/build-validate 4    → User smoke-tests the app → unlocks phases 5-7
+/build-phase 5       → QA: tests + security report
+/build-phase 6       → Build & Distribution: packaging + CI/CD
+/build-phase 7       → Documentation: README, guides → STOP
+/build-validate 7    → Final delivery accepted → transitions to Phase B
+```
+
+### Phase Dependencies
+
+```
+Phase 1 → [validate] → Phase 2 → [validate] → Phase 3
+                                              → Phase 4 → [validate] → Phase 5
+                                                                      → Phase 6 → Phase 7 → [validate] → Phase B
+```
+
+### Build Status
+
+Run `/build-status` to see current pipeline progress at any time.
+
+<!-- AGENT_TEAMS_START -->
+### Agent Teams (Phase 4)
+
+Phase 4 uses Agent Teams for parallel implementation. Core, UI, and integration agents work simultaneously in their own file scopes. This requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in the environment (configured during setup).
+<!-- AGENT_TEAMS_END -->
+
+---
+
+## Phase B — Issue Lifecycle
+
+Two workflow tiers — auto-detected by `/start-issue` from the `[CATEGORY]` prefix in the issue title.
+
+### Dev Workflow
+**Categories:** `[FEAT]`, `[BUG]`, `[ENH]`, `[REFAC]`, `[PERF]`, `[SEC]`, `[UI]`, `[UX]`
+
+```
+/create-issue        → Todo
+/start-issue 123     → Dev Started (branch, plan, doc, comment)
+  [development on feature branch]
+/ready-for-testing 123 → Automated Tests (targeted: only relevant suites)
+                       → Ready for testing (merge to develop, test protocol) → STOP
+/start-testing 123   → Being tested (manual or desktop E2E)
+/approve-testing 123 → Ready for Prod → STOP
+/deploy-issue 123    → Done (docs, full test suite, merge to main, release, close)
+```
+
+### Lightweight Workflow
+**Categories:** `[INFRA]`, `[DOCS]`, `[GOV]`, `[CHORE]`
+
+```
+/create-issue        → Todo
+/start-issue 123     → Dev Started (status, doc, comment — no branch)
+  [do the work]
+/close-issue 123     → Done (cleanup, close)
+```
+
+**GitHub Project:** {{GITHUB_PROJECT_URL}}
+
+## Project Kickoff Protocol (Phase B)
+
+When the user describes new features for an existing project, follow these steps **before writing any code:**
+
+- **Create ALL issues first.** Break the plan into issues and create every one using the `/create-issue` workflow. Each issue is assigned to **Backlog** on creation.
+<!-- NOTION_START -->
+- **Notion setup.** If `NOTION_DATABASE_ID` is `SETUP_PENDING`, run `/setup-notion` before starting any issue.
+<!-- NOTION_END -->
+- **Start Sprint 1.** When running the first `/start-issue`, move all planned issues from Backlog to **Sprint 1**.
+- **Then implement.** Only begin coding after all issues exist in GitHub and the sprint is set up.
+
+**This protocol is mandatory.** It applies to the initial project plan — the first time the user describes the whole project. Never start implementing without creating all GitHub issues first.
+
+## Commands
+
+```bash
+# Tests
+{{TEST_COMMAND_CORE}}
+{{TEST_COMMAND_UI}}
+{{E2E_TEST_COMMAND}}
+
+# App launch (dev mode)
+{{DEV_APP_COMMAND}}
+
+# App build & package
+{{BUILD_COMMAND}}
+{{PACKAGE_COMMAND}}
+```
+
+## Git
+
+Branch: `main` → `develop` → `feature/<issue>-<desc>`
+
+Commit: `<type>: <description>` (feat|fix|docs|style|refactor|perf|test|chore)
+
+Safety: Never force-push main. Stage specific files, never `git add .`. Check for user data before committing.
+
+## Context & Efficiency
+
+- **Prefer domain agents over Explore.** When the task matches a specialized agent's domain, delegate to that agent instead of Explore. Domain agents have project-specific knowledge that Explore lacks.
+- **Agent routing**: Use `Grep`/`Glob` directly for targeted lookups. Use domain agents for domain tasks. Use `Explore` only for broad, non-domain-specific codebase searches.
+- **Use `/compact`** when context feels heavy or after long exploration. Use `/clear` between unrelated tasks.
+- **Model routing for subagents**: Use `haiku` for simple file searches and boilerplate generation. Use `sonnet` for routine development tasks. Reserve `opus` (main thread) for architecture decisions and complex debugging.
+- **Build pipeline model routing**: Use `opus` for phases 1-3 (specification quality is critical). Use `sonnet` for phases 4-7 (implementation and documentation).
+- **Scope investigations**: Never "search everything." Narrow searches to specific directories or file patterns.
+
+## Specialized Agents
+
+Use these agents via `Task` tool when their domain matches:
+
+### Phase A — Build Pipeline Agents
+
+| Agent | Phase | Role |
+|-------|-------|------|
+| `product-analyst` | 1 | PRD generation from Product Brief |
+| `solution-architect` | 2 | System architecture, ADR, C4, IPC contract |
+| `database-architect` | 2 | Local database schema, MCD, MLD, migrations |
+| `ui-designer` | 3 | Design system, component map, screen specs |
+| `core-dev` | 4 | Core/main process implementation (Clean Architecture) |
+| `ui-dev` | 4 | UI layer implementation |
+| `integration-glue` | 4 | Shared types, IPC contract verification |
+| `test-writer` | 5 | Unit, integration, desktop E2E test creation |
+| `devops-engineer` | 6 | App packaging, code signing, CI/CD, distribution docs |
+<!-- LOCAL_DOCS_START -->
+| `technical-writer` | 7 | README, developer guide |
+<!-- LOCAL_DOCS_END -->
+<!-- NOTION_START -->
+| (main thread) | 7 | Notion documentation via MCP tools |
+<!-- NOTION_END -->
+
+### Phase B — Lifecycle Agents
+
+| Agent | When to use |
+|-------|-------------|
+| `code-reviewer` | Code quality, conventions, post-change review |
+| `debugger` | Investigating errors, test failures, unexpected behavior |
+| `security-auditor` | Security reviews, IPC surface analysis (also used in Phase A phase 5) |
+| `test-runner` | Running test suites and reporting results |
+| `test-generator` | Writing/generating new tests for IPC handlers or UI components |
+| `ui-builder` | Building UI components and screens |
+
+## Quick Commands
+
+### Build Pipeline (Phase A)
+
+| Command | Purpose |
+|---------|---------|
+| `/build-phase <1-7>` | Execute a build pipeline phase |
+| `/build-validate <1,2,4,7>` | Validate and approve a phase checkpoint |
+| `/build-status` | Show build pipeline progress |
+
+### Issue Lifecycle (Phase B)
+
+| Command | Purpose |
+|---------|---------|
+| `/review` | Review staged changes for security, bugs, quality |
+| `/test` | Run all tests with pass/fail summary |
+| `/status` | Dashboard: branch, git state, active issue |
+| `/check-deploy` | Pre-release readiness checklist |
+
+## References (read only when needed)
+
+### Build Pipeline Outputs (Phase A)
+
+| Need | File |
+|------|------|
+| Product Brief (user input) | `docs/product-brief.md` |
+| Build pipeline state | `docs/build-state.json` |
+| Product Requirements | `docs/PRD.md` |
+| Architecture & IPC contract | `docs/architecture/` |
+| Local database schema & design | `docs/database/` |
+| UI design & components | `docs/design/` |
+| Test plan & coverage | `docs/qa/` |
+| Security audit & threat model | `docs/security/` |
+| Build, packaging & distribution | `docs/devops/` |
+
+### Lifecycle References (Phase B)
+
+| Need | File |
+|------|------|
+| Full documentation index | `docs/claude/INDEX.md` |
+| System architecture, components | `docs/claude/context/ARCHITECTURE.md` |
+| IPC channels, models, schemas, file locations | `docs/claude/context/API_REFERENCE.md` |
+| Dev/prod environments, app config | `docs/claude/context/ENVIRONMENTS.md` |
+| Build, packaging, distribution | `docs/claude/context/INFRASTRUCTURE.md` |
+| Code conventions, patterns, tech stack | `docs/claude/context/CODE_PATTERNS.md` |
+| GitHub field IDs, status IDs, naming | `docs/claude/operations/GITHUB_CONFIG.md` |
+| Epic/Story/Task definitions, story points | `docs/claude/operations/WORK_ITEMS.md` |
+| Debug procedures, common issues | `docs/claude/operations/TROUBLESHOOTING.md` |
+
+<!-- NOTION_START -->
+## Documentation Governance
+
+Two-tier system — local for Claude context, Notion for humans:
+
+- **Local (`docs/claude/`):** Auto-maintained context files. Updated during `/deploy-issue` or `/close-issue` when architecture, IPC surface, infrastructure, or patterns change.
+- **Notion (Documentation database):** Topic-based living documents. Updated via MCP tools during `/deploy-issue` or `/close-issue`. Organized by topic, not by issue.
+- **Issue docs (`docs/claude/issues/`):** Temporary files created by `/start-issue`, deleted by `/deploy-issue` or `/close-issue` after consolidation to Notion.
+
+### Topic-Based Documentation (mandatory)
+
+Notion docs are **organized by topic** (e.g., "IPC Architecture", "Window Management", "Auto-Update System"), NOT per-issue. The same document evolves over time as related work is completed.
+
+**Rules:**
+1. **Search first:** Always search Notion for an existing topic doc before creating a new one.
+2. **Update existing:** Add new info to the relevant section, update changed info, remove outdated info.
+3. **Create new** only when a genuinely new topic emerges with no existing doc.
+4. **Remove stale content:** When behavior changes, update or remove the old description — don't just append.
+
+### Documentation Granularity
+
+Not every issue needs Notion documentation. Follow this guide:
+
+| Work item | When to document |
+|-----------|-----------------|
+| **Task** (T-) | Almost never on its own. Contributes to parent Story/Epic doc. |
+| **Story** (S-) | Yes — when the Story is complete, consolidate to the relevant topic doc. |
+| **Epic** (E-) | Yes — may warrant a new topic doc or major update to an existing one. |
+| **Lightweight** (INFRA/DOCS/GOV/CHORE) | Only if it introduces knowledge worth preserving (e.g., new build config). |
+
+### Notion Document Standards
+
+Every Notion doc **must** include:
+
+1. **Version property:** Set in page properties (e.g., `1.0`, `1.1`)
+2. **Audience property:** Always defined — one or more of: Developers, End Users, Operations, Stakeholders
+3. **Doc Type property:** Always defined — one of: Tutorial, How-To, Reference, Explanation
+4. **Version history callout + table** at the top of content:
+   - Callout with Created date, Last Modified date, Version
+   - Table with columns: Version, Date, Changes (short description)
+5. **Bump version** on updates: increment minor version (1.0 → 1.1 → 1.2), update Last Modified date, add row to version history table
+<!-- NOTION_END -->

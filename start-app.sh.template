@@ -1,0 +1,52 @@
+#!/bin/bash
+# {{PROJECT_NAME}} - Desktop App Launcher (Dev Mode)
+# Starts the application in development mode
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+ACTION="${1:-start}"
+
+case "$ACTION" in
+    start)
+        echo -e "${GREEN}Starting {{PROJECT_NAME}} in dev mode...${NC}"
+        echo -e "  Command: {{DEV_APP_COMMAND}}"
+        echo ""
+        cd "$SCRIPT_DIR"
+        {{DEV_APP_COMMAND}}
+        ;;
+    stop)
+        echo -e "${YELLOW}Stopping {{PROJECT_NAME}} dev processes...${NC}"
+        # Kill any running dev process by name (adjust pattern as needed)
+        pkill -f "{{DEV_APP_COMMAND}}" 2>/dev/null || true
+        echo -e "${GREEN}Done.${NC}"
+        ;;
+    build)
+        echo -e "${GREEN}Building {{PROJECT_NAME}}...${NC}"
+        cd "$SCRIPT_DIR"
+        {{BUILD_COMMAND}}
+        echo -e "${GREEN}Build complete.${NC}"
+        ;;
+    package)
+        echo -e "${GREEN}Packaging {{PROJECT_NAME}} for distribution...${NC}"
+        cd "$SCRIPT_DIR"
+        {{PACKAGE_COMMAND}}
+        echo -e "${GREEN}Package complete.${NC}"
+        ;;
+    *)
+        echo "Usage: bash start-app.sh [start|stop|build|package]"
+        echo ""
+        echo "  start    Launch the app in dev mode (default)"
+        echo "  stop     Kill dev mode processes"
+        echo "  build    Compile/bundle the application"
+        echo "  package  Create platform installers"
+        exit 1
+        ;;
+esac
